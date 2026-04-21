@@ -10,8 +10,7 @@ CORS(app)  # <--- NEW LINE 2
 # ... (keep the rest of your app.py code exactly the same below this)
 
 # Direct path to your new 'brain' file
-MODEL_PATH = r'C:\dia_predict_ai\Model\model.pkl'
-
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model.pkl')
 # Load the model
 with open(MODEL_PATH, 'rb') as f:
     model = pickle.load(f)
