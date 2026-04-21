@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        if (!sessionStorage.getItem('isLoggedIn')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiaPredict AI - Zawr Industries</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root { --zawr-blue: #3498db; --med-dark: #2c3e50; --med-green: #27ae60; --med-red: #e74c3c; --bg-pink: #fff0f5; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; width: 100%; min-height: 100vh;
+            background-color: var(--bg-pink); display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
+        }
+        body::before {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(90deg, var(--bg-pink) 0%, transparent 10%, transparent 90%, var(--bg-pink) 100%),
+                        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='300' viewBox='0 0 1000 300'%3E%3Cpath d='M0 150 L200 150 L220 130 L240 170 L260 150 L350 150 L370 50 L390 250 L410 150 L600 150 L620 130 L640 170 L660 150 L800 150 L820 50 L840 250 L860 150 L1000 150' fill='none' stroke='%233498db' stroke-width='3' stroke-opacity='0.4' /%3E%3C/svg%3E");
+            background-size: 1000px 300px; animation: ecgScroll 6s linear infinite; z-index: -1;
+        }
+        @keyframes ecgScroll { from { background-position: 0 center; } to { background-position: -1000px center; } }
+        
+        .container { 
+            background: rgba(255, 255, 255, 0.98); padding: 40px; border-radius: 24px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1); width: 90%; max-width: 440px; 
+            border-top: 6px solid var(--zawr-blue); margin: 50px 0; z-index: 10;
+        }
+        .doc-welcome { text-align: center; font-size: 14px; color: var(--zawr-blue); font-weight: bold; margin-bottom: 10px; }
+        .company-header { text-align: center; margin-bottom: 30px; }
+        h2 { color: var(--med-dark); margin: 5px 0; font-size: 32px; font-weight: 800; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+        input { width: 100%; padding: 12px; border: 2px solid #edf2f7; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 16px; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 700; margin-top: 10px; }
+        #predictBtn { background: var(--zawr-blue); }
+        #downloadBtn { background: var(--med-green); display: none; }
+        #result { margin-top: 25px; padding: 20px; border-radius: 16px; text-align: center; font-weight: 800; display: none; font-size: 20px; }
+        .high-risk { background-color: #fff5f5; color: var(--med-red); border: 2px solid #feb2b2; }
+        .low-risk { background-color: #f0fff4; color: var(--med-green); border: 2px solid #9ae6b4; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="welcome" class="doc-welcome"></div>
+    <div class="company-header">
+        <h2>DiaPredict AI</h2>
+    </div>
+
+    <div class="form-group">
+        <label>Patient Full Name</label>
+        <input type="text" id="patientName" placeholder="Enter patient name">
+    </div>
+    <div class="form-group">
+        <label>Patient Age</label>
+        <input type="number" id="age" placeholder="e.g. 23">
+    </div>
+    <div class="form-group">
+        <label>Glucose Level (mg/dL)</label>
+        <input type="number" id="glucose" placeholder="e.g. 150">
+    </div>
+    <div class="form-group">
+        <label>BMI</label>
+        <input type="number" id="bmi" step="0.1" placeholder="e.g. 30.0">
+    </div>
+    
+    <button id="predictBtn" onclick="getPrediction()">Check Risk Score</button>
+    <button id="downloadBtn" onclick="generatePDF()">Download Patient Report</button>
+    <div id="result"></div>
+</div>
+
+<script>
+    // Load doctor info
+    const docData = JSON.parse(sessionStorage.getItem('docInfo'));
+    if(docData) {
+        document.getElementById('welcome').innerText = `Logged in: ${docData.name} (${docData.clinic})`;
+    }
+
+    async function getPrediction() {
+        const resultDiv = document.getElementById('result');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const predictBtn = document.getElementById('predictBtn');
+        
+        const data = {
+            Pregnancies: 2,
+            Glucose: parseFloat(document.getElementById('glucose').value),
+            BloodPressure: 70, SkinThickness: 20, Insulin: 80,
+            BMI: parseFloat(document.getElementById('bmi').value),
+            DiabetesPedigreeFunction: 0.5,
+            Age: parseInt(document.getElementById('age').value)
+        };
+
+        predictBtn.innerText = "Analyzing...";
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            resultDiv.style.display = 'block';
+            if (result.prediction === 1) {
+                resultDiv.className = 'high-risk';
+                resultDiv.innerHTML = `High Risk Warning<br><span style="font-size: 14px;">Probability: ${result.risk_score}</span>`;
+            } else {
+                resultDiv.className = 'low-risk';
+                resultDiv.innerHTML = `Low Risk Detected<br><span style="font-size: 14px;">Probability: ${result.risk_score}</span>`;
+            }
+            downloadBtn.style.display = 'block';
+        } catch (error) {
+            alert("Ensure backend is running!");
+        } finally {
+            predictBtn.innerText = "Check Risk Score";
+        }
+    }
+
+    async function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const docInfo = JSON.parse(sessionStorage.getItem('docInfo'));
+        const name = document.getElementById('patientName').value;
+        const cleanResult = document.getElementById('result').innerText.replace(/[^\x00-\x7F]/g, "").trim(); 
+
+        doc.setFontSize(10);
+        doc.text(`Doctor: ${docInfo.name} | Clinic: ${docInfo.clinic}`, 20, 15);
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.text("DiaPredict AI Report", 20, 30);
+        doc.setFontSize(12);
+        doc.text(`Patient: ${name} | Date: ${new Date().toLocaleDateString()}`, 20, 45);
+        doc.line(20, 50, 190, 50);
+        doc.text(cleanResult, 20, 70);
+        doc.save(`Report_${name}.pdf`);
+    }
+</script>
+</body>
+</html>
