@@ -1,16 +1,15 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # <--- NEW LINE 1
+from flask_cors import CORS
 import pickle
 import numpy as np
 import os
 
 app = Flask(__name__)
-CORS(app)  # <--- NEW LINE 2
+CORS(app)
 
-# ... (keep the rest of your app.py code exactly the same below this)
-
-# Direct path to your new 'brain' file
+# Direct path to your 'brain' file
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model.pkl')
+
 # Load the model
 with open(MODEL_PATH, 'rb') as f:
     model = pickle.load(f)
@@ -19,10 +18,24 @@ with open(MODEL_PATH, 'rb') as f:
 def predict():
     try:
         data = request.json
-        # The AI needs exactly 8 pieces of data to work
+        
+        # We grab the glucose value first to check our safety rule
+        glucose_val = float(data['Glucose'])
+        
+        # --- THE ONLY CHANGE: MEDICAL GUARDRAIL ---
+        if glucose_val >= 200:
+            return jsonify({
+                "prediction": 1,  
+                "risk_score": "95.0%", 
+                "status": "Success",
+                "message": "Clinical Override: High Glucose detected."
+            })
+        # ------------------------------------------
+
+        # REST OF YOUR CODE REMAINS EXACTLY THE SAME
         features = np.array([[
             data['Pregnancies'],
-            data['Glucose'],
+            glucose_val,
             data['BloodPressure'],
             data['SkinThickness'],
             data['Insulin'],
@@ -39,6 +52,7 @@ def predict():
             "risk_score": f"{round(float(probability) * 100, 2)}%",
             "status": "Success"
         })
+
     except Exception as e:
         return jsonify({"error": str(e), "status": "Failed"})
 
