@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Registration - Zawr Industries</title>
+    <style>
+        :root { --zawr-blue: #3498db; --med-dark: #1a2a3a; --glass-bg: rgba(255, 255, 255, 0.98); }
+        body { 
+            font-family: 'Segoe UI', sans-serif; margin: 0;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            background: radial-gradient(circle at center, #2c3e50 0%, #000000 100%);
+            overflow-y: auto; position: relative; padding: 20px 0;
+        }
+        body::before {
+            content: ""; position: fixed; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(52, 152, 219, 0.15), transparent);
+            animation: fastScan 4s linear infinite; pointer-events: none;
+        }
+        @keyframes fastScan { 0% { left: -100%; } 100% { left: 100%; } }
+        .login-card { 
+            background: var(--glass-bg); padding: 30px 40px; border-radius: 30px; 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6); width: 90%; max-width: 400px;
+            border-top: 6px solid var(--zawr-blue); z-index: 10; margin-top: 40px; 
+        }
+        h2 { text-align: center; color: var(--med-dark); margin-bottom: 25px; font-weight: 800; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #333; }
+        input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
+        button { width: 100%; padding: 16px; background: var(--zawr-blue); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 16px; margin-top: 10px; }
+        .footer-branding { text-align: center; color: rgba(255, 255, 255, 0.8); font-size: 14px; letter-spacing: 2px; z-index: 10; padding-bottom: 40px; margin-top: auto; }
+        .zawr-text { color: #5dade2; font-weight: 800; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h2>Doctor Registration</h2>
+        <div class="form-group">
+            <label>Doctor's Name</label>
+            <input type="text" id="docName" placeholder="Enter Full Name" oninput="handleInput(this)">
+        </div>
+        <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="text" id="docMobile" placeholder="+91 XXXX-XXXXXX">
+        </div>
+        <div class="form-group">
+            <label>Clinic Name</label>
+            <input type="text" id="clinicName" list="clinics" placeholder="Enter Clinic Name" oninput="handleInput(this)">
+            <datalist id="clinics"><option value="People's Tree Hospital"><option value="Manipal Hospital"></datalist>
+        </div>
+        <div class="form-group">
+            <label>Clinic Address</label>
+            <input type="text" id="clinicAddress" list="locations" placeholder="Enter Area" oninput="handleInput(this)">
+            <datalist id="locations"><option value="Yeshwanthpur, Bangalore"><option value="BTM Layout, Bangalore"></datalist>
+        </div>
+        <button onclick="registerDoctor()">Register & Enter Dashboard</button>
+    </div>
+    <div class="footer-branding">powered by <span class="zawr-text">ZAWR INDUSTRIES</span></div>
+    <script>
+        function handleInput(e) {
+            let words = e.value.split(' ');
+            for (let i = 0; i < words.length; i++) {
+                if (words[i].length > 0) {
+                    words[i] = words[i].charAt(0).toUpperCase() + words[i].slice(1).toLowerCase();
+                }
+            }
+            e.value = words.join(' ');
+        }
+        function registerDoctor() {
+            const n = document.getElementById('docName').value.trim();
+            const m = document.getElementById('docMobile').value.trim();
+            const c = document.getElementById('clinicName').value.trim();
+            const a = document.getElementById('clinicAddress').value.trim();
+            if(!n || !m || !c || !a) { alert("ACCESS DENIED: Please fill all fields."); return; }
+            sessionStorage.setItem('isLoggedIn', 'true');
+            sessionStorage.setItem('docInfo', JSON.stringify({name:n, mobile:m, clinic:c, address:a}));
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
