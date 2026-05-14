@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>if (!sessionStorage.getItem('isLoggedIn')) { window.location.href = 'login.html'; }</script>
+    <meta charset="UTF-8">
+    <title>DiaPredict AI - Zawr Industries</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { 
+            --zawr-blue: #3498db; --med-dark: #2c3e50; --med-green: #27ae60; --med-red: #e74c3c; 
+            --bg-pink: #fff0f5; --cyan-green: #00d2ad; --light-orange: #ff9f43;
+            --wa-green: #25d366; --grey-text: #7f8c8d;
+        }
+        body { 
+            font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: var(--bg-pink); 
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh; position: relative; 
+        }
+        body::before { 
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(90deg, var(--bg-pink) 0%, transparent 10%, transparent 90%, var(--bg-pink) 100%), 
+                        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='300' viewBox='0 0 1000 300'%3E%3Cpath d='M0 150 L200 150 L220 130 L240 170 L260 150 L350 150 L370 50 L390 250 L410 150 L600 150 L620 130 L640 170 L660 150 L800 150 L820 50 L840 250 L860 150 L1000 150' fill='none' stroke='%233498db' stroke-width='3' stroke-opacity='0.4' /%3E%3C/svg%3E"); 
+            background-size: 800px 250px; animation: ecgScroll 6s linear infinite; z-index: -1; 
+        }
+        @keyframes ecgScroll { from { background-position: 0 center; } to { background-position: -800px center; } }
+        
+        /* RESTORED FULL SIZE LAYOUT */
+        .main-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 40px;
+            width: 100%;
+            padding: 30px 20px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        /* FULL SIZE DATA ENTRY PAGE */
+        .container { 
+            background: rgba(255, 255, 255, 0.98); padding: 35px; border-radius: 25px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1); width: 100%; max-width: 480px; 
+            border-top: 8px solid var(--zawr-blue); margin: 0;
+        }
+
+        /* SMALL COMPACT SIDEBAR */
+        .bmi-sidebar {
+            background: #ffffff; padding: 20px; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 220px;
+            border: 1px solid #e0e6ed;
+            position: sticky; top: 30px;
+        }
+
+        .bmi-header { color: var(--grey-text); font-size: 14px; font-weight: 800; text-align: center; margin-bottom: 15px; text-transform: uppercase; }
+        .doc-welcome { text-align: center; font-size: 15px; color: var(--cyan-green); font-weight: 800; margin-bottom: 15px; }
+        h2 { text-align: center; color: var(--med-dark); font-size: 32px; font-weight: 800; margin: 0 0 25px 0; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 15px; }
+        input { width: 100%; padding: 12px; border: 2px solid #edf2f7; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        
+        button { width: 100%; padding: 15px; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 17px; margin-top: 10px; transition: 0.3s; }
+        #predictBtn { background: var(--light-orange); }
+        #predictBtn:hover { background: #ee8e2e; transform: translateY(-2px); }
+        #downloadBtn { background: var(--med-green); display: none; margin-top: 15px; }
+        .wa-btn { background: var(--wa-green); }
+
+        #result { margin-top: 25px; padding: 20px; border-radius: 15px; text-align: center; font-weight: 800; display: none; font-size: 18px; line-height: 1.4; }
+        .high-risk { border: 2px solid var(--med-red); color: var(--med-red); background: transparent; }
+        .low-risk { border: 2px solid var(--med-green); color: var(--med-green); background: transparent; }
+
+        .footer-branding { text-align: center; color: #7f8c8d; font-size: 13px; letter-spacing: 1px; padding-bottom: 40px; margin-top: 0; z-index: 10; }
+        .zawr-text { color: var(--zawr-blue); font-weight: 800; }
+
+        .auto-result-box {
+            margin-top: 15px; padding: 10px; border-radius: 10px; background: #f8fafc;
+            text-align: center; border: 2px dashed #cbd5e0;
+        }
+        .bmi-val-text { font-size: 22px; color: var(--zawr-blue); font-weight: 800; }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <!-- RESTORED FULL WIDTH CONTAINER -->
+    <div class="container">
+        <div id="welcome" class="doc-welcome"></div>
+        <h2>DiaPredict AI</h2>
+        <div class="form-group"><label>Patient Name</label><input type="text" id="patientName" placeholder="Enter patient name" oninput="handleInput(this)"></div>
+        <div class="form-group"><label>WhatsApp Number</label><input type="text" id="patientPhone" placeholder="Enter 10-digit number" maxlength="15"></div>
+        <div class="form-group"><label>Age</label><input type="number" id="age" placeholder="Age"></div>
+        <div class="form-group"><label>Glucose (mg/dL)</label><input type="number" id="glucose" placeholder="e.g. 140"></div>
+        <div class="form-group"><label>BMI</label><input type="number" id="bmi" step="0.1" readonly style="background:#f1f5f9;" placeholder="Calculated automatically"></div>
+        
+        <button id="predictBtn" onclick="getPrediction()">Check Risk Score</button>
+        <button id="downloadBtn" onclick="generatePDF()">Download Local Copy</button>
+        
+        <div class="comm-panel" id="commPanel" style="display:none;">
+            <button class="wa-btn" onclick="sendWhatsApp()">Share via WhatsApp</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <!-- SMALL BMI SIDEBAR -->
+    <div class="bmi-sidebar">
+        <div class="bmi-header">BMI Calculator</div>
+        <div class="form-group">
+            <label style="font-size:12px;">Weight (kg)</label>
+            <input type="number" id="weight" placeholder="kg" oninput="autoCalcBMI()" style="padding:8px; font-size:14px;">
+        </div>
+        <div class="form-group">
+            <label style="font-size:12px;">Height (cm)</label>
+            <input type="number" id="height" placeholder="cm" oninput="autoCalcBMI()" style="padding:8px; font-size:14px;">
+        </div>
+        <div class="auto-result-box">
+            <div style="font-size: 10px; color: var(--grey-text); margin-bottom: 3px;">LIVE RESULT</div>
+            <div id="sideBmiResult" class="bmi-val-text">--</div>
+        </div>
+    </div>
+</div>
+
+<div class="footer-branding">powered by <span class="zawr-text">ZAWR INDUSTRIES</span></div>
+
+<script>
+    const d = JSON.parse(sessionStorage.getItem('docInfo'));
+    if(d) document.getElementById('welcome').innerText = `Dr. ${d.name} | ${d.clinic}`;
+
+    function handleInput(e) {
+        let words = e.value.split(' ');
+        for (let i = 0; i < words.length; i++) {
+            if (words[i].length > 0) words[i] = words[i].charAt(0).toUpperCase() + words[i].slice(1).toLowerCase();
+        }
+        e.value = words.join(' ');
+    }
+
+    function autoCalcBMI() {
+        const w = parseFloat(document.getElementById('weight').value);
+        const h = parseFloat(document.getElementById('height').value) / 100;
+        const sideDisplay = document.getElementById('sideBmiResult');
+        const mainInput = document.getElementById('bmi');
+
+        if (w > 0 && h > 0) {
+            const bmi = (w / (h * h)).toFixed(1);
+            sideDisplay.innerText = bmi;
+            mainInput.value = bmi;
+            if (bmi < 18.5) sideDisplay.style.color = 'var(--med-red)';
+            else if (bmi >= 25) sideDisplay.style.color = 'var(--light-orange)';
+            else sideDisplay.style.color = 'var(--med-green)';
+        } else {
+            sideDisplay.innerText = "--";
+            mainInput.value = "";
+        }
+    }
+
+    async function getPrediction() {
+        const resDiv = document.getElementById('result');
+        const predictBtn = document.getElementById('predictBtn');
+        const name = document.getElementById('patientName').value.trim();
+        const phone = document.getElementById('patientPhone').value.trim();
+        const age = document.getElementById('age').value;
+        const glucose = document.getElementById('glucose').value;
+        const bmi = document.getElementById('bmi').value;
+
+        if (!name || !phone || !age || !glucose || !bmi) {
+            alert("⚠️ Missing Data: Please fill in all fields.");
+            return;
+        }
+
+        const data = { Pregnancies: 2, Glucose: parseFloat(glucose), BMI: parseFloat(bmi), Age: parseInt(age), BloodPressure: 70, SkinThickness: 20, Insulin: 80, DiabetesPedigreeFunction: 0.5 };
+        
+        predictBtn.innerText = "Connecting to Cloud AI...";
+        try {
+            const resp = await fetch('https://dia-predict-ai.onrender.com/predict', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(data) 
+            });
+            const res = await resp.json();
+            resDiv.style.display = 'block';
+            resDiv.className = res.prediction === 1 ? 'high-risk' : 'low-risk';
+            resDiv.innerHTML = `${res.prediction === 1 ? 'High Risk Warning' : 'Low Risk Detected'}<br>Score: ${res.risk_score}`;
+            document.getElementById('downloadBtn').style.display = 'block';
+            document.getElementById('commPanel').style.display = 'block';
+            resDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (e) { 
+            alert("AI Server is waking up. Please try again."); 
+        } finally {
+            predictBtn.innerText = "Check Risk Score";
+        }
+    }
+
+    function sendWhatsApp() {
+        const phoneInput = document.getElementById('patientPhone').value;
+        const cleanPhone = phoneInput.replace(/\D/g, ''); 
+        const pName = document.getElementById('patientName').value.trim();
+        const resElem = document.getElementById('result').innerText.split('\n');
+        const resultText = resElem[0];
+        const scoreVal = resElem[1] ? resElem[1].split(': ')[1] : "";
+
+        if(cleanPhone.length < 10) return alert("Enter valid 10-digit number!");
+        const finalPhone = cleanPhone.length === 10 ? "91" + cleanPhone : cleanPhone;
+        
+        const msg = `Hello *${pName}*,%0A` +
+                    `This is a notification regarding your Medical Checkup at *${d.clinic}*%0A%0A` +
+                    `Result : ${resultText}%0A` +
+                    `Risk Score : *${scoreVal}*%0A` +
+                    `Please find your detailed DiaPredict AI report from your prescribed doctor%0A%0A` +
+                    `Regards,%0A` +
+                    `*Dr. ${d.name}*%0A%0A` +
+                    `_powered by ZAWR INDUSTRIES_`;
+        
+        window.open(`https://wa.me/${finalPhone}?text=${msg}`, '_blank');
+        generatePDF();
+    }
+
+    async function generatePDF() {
+        const { jsPDF } = window.jspdf; 
+        const doc = new jsPDF();
+        const pName = document.getElementById('patientName').value.trim() || "Patient";
+        let resTxt = document.getElementById('result').innerText.replace(/[^\x00-\x7F]/g, "").trim();
+        const isHigh = resTxt.toLowerCase().includes("high");
+
+        doc.setDrawColor(0, 51, 102); 
+        doc.setLineWidth(1.5);
+        doc.rect(5, 5, 200, 287, 'D'); 
+        doc.setLineWidth(0.5);
+        doc.rect(7, 7, 196, 283, 'D'); 
+
+        doc.saveGraphicsState();
+        doc.setGState(new doc.GState({opacity: 0.2})); 
+        doc.setTextColor(150, 150, 150); 
+        doc.setFontSize(50); 
+        doc.setFont("helvetica", "bold");
+        doc.text(d.clinic.toUpperCase(), 45, 220, { angle: 48 });
+        doc.restoreGraphicsState();
+
+        doc.setTextColor(44, 62, 80); doc.setFontSize(18); doc.setFont("helvetica", "bold"); 
+        doc.text(d.clinic.toUpperCase(), 105, 20, { align: "center" });
+        doc.setFontSize(12); doc.text(`Dr. ${d.name.toUpperCase()}`, 105, 28, { align: "center" });
+        doc.setFontSize(10); doc.setFont("helvetica", "normal");
+        doc.text(`Contact: ${d.mobile}`, 105, 34, { align: "center" });
+        doc.text(d.address, 105, 39, { align: "center" });
+
+        doc.setDrawColor(52, 152, 219); doc.setLineWidth(1); doc.line(20, 48, 190, 48);
+
+        doc.setFontSize(22); doc.setFont("helvetica", "bold"); doc.setTextColor(39, 174, 96); 
+        doc.text("MEDICAL REPORT", 20, 62);
+        doc.setDrawColor(39, 174, 96); doc.setLineWidth(1); doc.line(20, 65, 95, 65);
+        
+        doc.setFontSize(10); doc.setTextColor(100); doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 72);
+
+        doc.setFontSize(12); doc.setTextColor(44, 62, 80); doc.setFont("helvetica", "bold");
+        doc.text(`PATIENT: ${pName.toUpperCase()}`, 25, 88); doc.text(`AGE: ${document.getElementById('age').value} Years`, 140, 88);
+        
+        doc.setFont("helvetica", "normal"); doc.setTextColor(0);
+        doc.text(`• Blood Glucose: ${document.getElementById('glucose').value} mg/dL`, 25, 115);
+        doc.text(`• BMI: ${document.getElementById('bmi').value}`, 25, 125);
+
+        const boxColor = isHigh ? [231, 76, 60] : [39, 174, 96]; 
+        doc.setDrawColor(boxColor[0], boxColor[1], boxColor[2]);
+        doc.setLineWidth(0.8);
+        doc.rect(20, 145, 170, 40, 'D'); 
+        
+        doc.setFontSize(16); doc.setTextColor(boxColor[0], boxColor[1], boxColor[2]);
+        doc.setFont("helvetica", "bold");
+        doc.text(resTxt.split('\n')[0], 25, 162);
+        doc.setFontSize(12); doc.setTextColor(100); doc.text(resTxt.split('\n')[1] || "", 25, 175);
+
+        doc.setTextColor(boxColor[0], boxColor[1], boxColor[2]);
+        doc.setFontSize(14); doc.setFont("helvetica", "bold");
+        doc.text("CLINICAL RECOMMENDATION:", 20, 205);
+        doc.setDrawColor(0); doc.setLineWidth(0.5); doc.line(20, 207, 100, 207); 
+        
+        doc.setFontSize(11); doc.setFont("helvetica", "normal"); doc.setTextColor(40);
+        const recText = isHigh 
+            ? "Parameters are at the higher range. Clinical intervention required. Immediate follow-up and confirmatory testing required."
+            : "Parameters are within the normal range. Proactive monitoring and lifestyle guidance recommended.";
+        
+        const splitRec = doc.splitTextToSize(recText, 160);
+        doc.text(splitRec, 20, 215);
+
+        doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.5); doc.line(20, 280, 190, 280);
+        doc.setFontSize(10); doc.setTextColor(127, 140, 141);
+        const t1 = "powered by "; const t2 = "ZAWR INDUSTRIES";
+        const w1 = doc.getTextWidth(t1); const w2 = doc.getTextWidth(t2);
+        const startX = (210 - (w1 + w2)) / 2;
+        doc.text(t1, startX, 288);
+        doc.setTextColor(52, 152, 219); doc.setFont("helvetica", "bold"); doc.text(t2, startX + w1, 288);
+
+        doc.save(`${pName}_Report.pdf`);
+    }
+</script>
+</body>
+</html>
